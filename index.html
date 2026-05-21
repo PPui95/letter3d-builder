@@ -1,1 +1,613 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Image Prompt Builder v3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#CC0000;--red-light:#fff0f0;--border:#e0e0e0;--bg2:#f5f5f5;--text:#1a1a1a;--sub:#666;--faint:#aaa}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f0f0;min-height:100vh}
+.app{max-width:800px;margin:0 auto;background:#fff;min-height:100vh;padding:1.5rem}
+h1{font-size:18px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.subtitle{font-size:12px;color:var(--sub);margin-bottom:1.25rem}
+.sec{margin-bottom:1.25rem}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sec-label{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:5px}
+.selected-badge{font-size:11px;color:var(--red);background:var(--red-light);padding:2px 10px;border-radius:100px;font-weight:500;white-space:nowrap}
+.chip-scroll{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 13px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:12.5px;color:var(--sub);cursor:pointer;transition:all .12s;user-select:none;line-height:1.4}
+.chip:hover{border-color:#aaa;color:var(--text);background:var(--bg2)}
+.chip.active{border-color:var(--red);background:var(--red-light);color:var(--red);font-weight:600}
+.chip .sub{display:block;font-size:10px;color:#999;font-weight:400;margin-top:1px}
+.chip.active .sub{color:#cc6666}
+.chip-group-label{width:100%;font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-top:6px;margin-bottom:2px;padding-left:2px}
+input[type=text],textarea{width:100%;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;outline:none;transition:border-color .15s;color:var(--text);background:#fff}
+input[type=text]:focus,textarea:focus{border-color:var(--red)}
+select{padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-family:inherit;outline:none;cursor:pointer;background:#fff;color:var(--text)}
+select:focus{border-color:var(--red)}
+.field-row{display:flex;gap:8px}
+.field-row>*{flex:1}
+hr{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
+.bg-upload-area{border:2px dashed var(--border);border-radius:10px;padding:10px 16px;text-align:center;cursor:pointer;margin-top:8px;transition:border-color .15s;position:relative;overflow:hidden}
+.bg-upload-area:hover{border-color:var(--red)}
+.bg-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.bg-upload-area .up-label{font-size:12px;color:var(--faint)}
+.bg-upload-area .up-label span{color:var(--red);font-weight:600}
+.bg-preview{width:100%;max-height:80px;object-fit:cover;border-radius:8px;margin-top:8px;display:none}
+.summary-box{background:#fffbe6;border:1.5px solid #f0c020;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem}
+.summary-box .s-head{font-size:11px;font-weight:700;color:#b07800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.summary-box .s-text{font-size:13.5px;color:#5a3e00;line-height:1.8;min-height:40px}
+.output-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;min-height:90px}
+.output-text{font-size:12.5px;color:var(--text);line-height:1.75;white-space:pre-wrap;font-family:'Consolas',monospace}
+.output-placeholder{font-size:13px;color:var(--faint);font-style:italic}
+.token-count{font-size:11px;color:var(--faint);margin-top:5px;text-align:right}
+.btn-row{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.btn{padding:9px 18px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .15s;-webkit-appearance:none;appearance:none}
+.btn:hover{background:var(--bg2)}
+.btn:active{transform:scale(0.97)}
+.btn-primary{background:var(--red);color:#fff;border-color:var(--red);font-weight:600}
+.btn-primary:hover{background:#aa0000}
+.btn-primary:active{background:#880000}
+.copied{font-size:12px;color:#0a7;background:#e1f7ee;border-radius:100px;padding:3px 12px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🪄 AI Image Prompt Builder</h1>
+  <div class="subtitle">สร้าง Prompt ภาพ AI แบบครบ — เลือกคลิกแล้วก็พร้อมใช้งาน</div>
+
+  <!-- Subject -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-label">👤 ตัวแบบ (Subject)</div>
+      <span class="selected-badge" id="subBadge">ยังไม่ได้เลือก</span>
+    </div>
+    <div class="field-row">
+      <select id="subjectType" onchange="update()">
+        <option value="">-- เลือกประเภทตัวแบบ --</option>
+        <option value="Use the uploaded woman as a reference. Keep the face highly accurate and realistic.">📸 หญิง (จากรูป Reference)</option>
+        <option value="Use the uploaded man as a reference. Keep the face highly accurate and realistic.">📸 ชาย (จากรูป Reference)</option>
+        <option value="A confident professional Thai woman,">👩‍💼 หญิงไทย สายวิชาชีพ</option>
+        <option value="A confident professional Thai man,">👨‍💼 ชายไทย สายวิชาชีพ</option>
+        <option value="A diverse group of business professionals,">👥 กลุ่มทีมงาน</option>
+        <option value="A young cheerful Thai woman,">🌸 หญิงไทย อายุน้อย สดใส</option>
+        <option value="A mature elegant Thai woman,">💎 หญิงไทย วัยกลางคน หรูหรา</option>
+        <option value="A strong athletic Thai man,">💪 ชายไทย สายกีฬา/ฟิต</option>
+        <option value="">🚫 ไม่มีตัวแบบ</option>
+      </select>
+      <input type="text" id="subjectCustom" placeholder="เพิ่มรายละเอียด เช่น age 30s, smiling warmly" oninput="update()" />
+    </div>
+  </div>
+
+  <!-- Outfit -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-label">👗 ชุดและบุคลิก</div>
+      <span class="selected-badge" id="outBadge">ยังไม่ได้เลือก</span>
+    </div>
+    <div class="chip-scroll" id="outfitChips"></div>
+    <input type="text" id="outfitCustom" placeholder="หรือพิมพ์เพิ่มเติม เช่น golden blazer, relaxed pose" oninput="update()" style="margin-top:8px" />
+  </div>
+
+  <!-- 3D Text + Color -->
+  <div class="sec">
+    <div class="sec-head"><div class="sec-label">✍️ ข้อความ 3D</div></div>
+    <input type="text" id="textContent" placeholder='ข้อความ เช่น Growth Mindset / Sales Champion' oninput="update()" style="margin-bottom:10px" />
+    <div class="sec-head">
+      <div class="sec-label">🎨 สไตล์ & สีอักษร 3D</div>
+      <span class="selected-badge" id="colorBadge">ยังไม่ได้เลือก</span>
+    </div>
+    <div class="chip-scroll" id="colorChips"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+      <label style="font-size:12px;color:var(--sub);white-space:nowrap">🖌 รหัสสีเอง (HEX):</label>
+      <input type="text" id="hexColor" placeholder="#FF5500" maxlength="9" oninput="applyHex(this.value)" style="width:110px;flex:none" />
+      <input type="color" id="colorPicker" oninput="syncHex(this.value)" style="width:38px;height:36px;border:1px solid var(--border);border-radius:8px;cursor:pointer;padding:2px 3px;background:#fff;flex:none" />
+      <span style="font-size:11px;color:var(--sub)">← เลือกสีได้เลย</span>
+    </div>
+  </div>
+
+  <!-- Pose -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-label">🧍 ท่าทางและการโต้ตอบ</div>
+      <span class="selected-badge" id="poseBadge">ยังไม่ได้เลือก</span>
+    </div>
+    <div class="chip-scroll" id="poseChips"></div>
+    <input type="text" id="poseCustom" placeholder="หรือพิมพ์ท่าทางเอง เช่น arms crossed, looking to the side" oninput="update()" style="margin-top:8px" />
+  </div>
+
+  <!-- Background -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-label">🖼 พื้นหลังและแสง</div>
+      <span class="selected-badge" id="bgBadge">ยังไม่ได้เลือก</span>
+    </div>
+    <div class="chip-scroll" id="bgChips"></div>
+    <div class="bg-upload-area">
+      <input type="file" accept="image/*" onchange="handleBgUpload(this)" />
+      <div class="up-label">📎 หรือ <span>วางรูปพื้นหลังที่นี่</span> (JPG / PNG)</div>
+    </div>
+    <img id="bgPreview" class="bg-preview" />
+    <div id="bgUploadNote" style="font-size:11px;color:var(--red);margin-top:4px;display:none"></div>
+  </div>
+
+  <!-- Style -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-label">🎨 สไตล์ภาพรวม</div>
+      <span class="selected-badge" id="styBadge">ยังไม่ได้เลือก</span>
+    </div>
+    <div class="chip-scroll" id="styleChips"></div>
+  </div>
+
+  <!-- Ratio -->
+  <div class="sec">
+    <div class="sec-head"><div class="sec-label">📐 สัดส่วนภาพ</div></div>
+    <div class="chip-scroll" id="ratioChips"></div>
+  </div>
+
+  <hr />
+
+  <!-- Summary -->
+  <div class="summary-box">
+    <div class="s-head">📋 สรุปภาพเบื้องต้น (ภาษาไทย)</div>
+    <div class="s-text" id="summaryText" style="color:#c8a840;font-style:italic;font-size:13px">เลือกตัวเลือกด้านบน แล้วสรุปจะปรากฏที่นี่...</div>
+  </div>
+
+  <!-- Output -->
+  <div class="sec">
+    <div class="sec-head"><div class="sec-label">✨ Prompt ภาษาอังกฤษ (พร้อมใช้)</div></div>
+    <div class="output-box">
+      <div id="outputText" class="output-text" style="display:none"></div>
+      <div id="outputPlaceholder" class="output-placeholder">Prompt จะสร้างขึ้นอัตโนมัติเมื่อเลือกตัวเลือก...</div>
+    </div>
+    <div class="token-count" id="tokenCount"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-primary" id="copyBtn" onclick="copyPrompt()">📋 คัดลอก Prompt</button>
+      <button type="button" class="btn" onclick="resetAll()">🔄 รีเซ็ต</button>
+      <span id="copiedBadge" class="copied" style="display:none">✅ คัดลอกแล้ว!</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+
+const OUTFITS = [
+  {label:"ชุดแดงมั่นใจ",sub:"สีแดง สุภาพ",val:"stylish red blazer with fitted red trousers, confident and powerful stance"},
+  {label:"สูทกรมท่า",sub:"Corporate Classic",val:"navy blue tailored business suit, crisp white shirt, polished and authoritative"},
+  {label:"ชุดขาวสะอาด",sub:"Fresh & Modern",val:"smart white outfit, clean and minimalist, fresh modern look"},
+  {label:"ชุดดำ Elegant",sub:"สง่า คลาสสิก",val:"elegant black dress or suit, sophisticated and poised, timeless style"},
+  {label:"ชุดทองหรู",sub:"Luxury Gold",val:"shimmering gold outfit with subtle texture, luxurious and glamorous"},
+  {label:"ชุดไทยสีสัน",sub:"Thai Traditional",val:"colorful Thai traditional outfit with intricate patterns, graceful and proud"},
+  {label:"Casual Smart",sub:"เป็นกันเอง",val:"smart casual outfit, light blue shirt, dark jeans, approachable and energetic"},
+  {label:"ชุดกีฬา Active",sub:"Sporty Dynamic",val:"athletic activewear, vibrant colors, dynamic and energetic pose"},
+  {label:"สูทสีเทา",sub:"Professional Gray",val:"charcoal gray business suit, silver tie, classic professional appearance"},
+  {label:"ชุดเขียว Fresh",sub:"Nature Vibe",val:"emerald green blouse or jacket, fresh and natural, optimistic energy"},
+  {label:"ชุดม่วง Creative",sub:"Creative Purple",val:"deep purple outfit, artistic and creative personality, unique style"},
+  {label:"ชุดส้มสดใส",sub:"Energetic Orange",val:"vibrant orange outfit, enthusiastic and warm, high energy personality"},
+  {label:"Denim Casual",sub:"ผ่อนคลาย",val:"stylish denim jacket with white t-shirt, relaxed casual look, friendly vibe"},
+  {label:"Formal Gown",sub:"ราตรีหรู",val:"floor-length formal gown in deep jewel tone, elegant evening wear"},
+  {label:"เสื้อลาย Pattern",sub:"Bold Pattern",val:"bold geometric patterned blazer, standing out with artistic confidence"},
+  {label:"Streetwear",sub:"Urban Style",val:"modern streetwear outfit, oversized jacket, stylish urban look"},
+  {label:"ชุดหมอ/วิชาชีพ",sub:"Medical/Expert",val:"clean professional white coat over smart outfit, expert authority look"},
+  {label:"ชุดครู/วิทยากร",sub:"Educator Look",val:"smart educator outfit, semi-formal, warm and trustworthy appearance"},
+  {label:"Monochrome",sub:"เดี่ยวสีเดียว",val:"monochrome outfit in a single bold color, head to toe, striking and modern"},
+  {label:"Pastel Soft",sub:"นุ่มนวล",val:"soft pastel-colored outfit in pink or mint, gentle and approachable"},
+  {label:"ชุด CEO Power",sub:"Executive Look",val:"power executive outfit, dark tailored suit, strong leadership presence"},
+  {label:"ชุดนักขาย",sub:"Sales Pro",val:"dynamic sales professional outfit, sharp blazer, confident salesperson energy"},
+  {label:"ชุดโค้ช",sub:"Coaching Vibe",val:"coaching-style outfit, polo shirt or sporty blazer, motivational trainer look"},
+  {label:"ชุดสปา/Wellness",sub:"Calm & Healing",val:"light linen or white wellness outfit, calm serene expression, spa energy"},
+  {label:"Tech Startup",sub:"Silicon Valley",val:"tech startup casual, hoodie or simple tee with jeans, innovative modern vibe"},
+  {label:"ชุดอีเวนต์",sub:"Event Host",val:"glamorous event host outfit, microphone in hand, stage presence"},
+  {label:"Vintage Retro",sub:"ย้อนยุค",val:"vintage retro style outfit from the 1970s or 1980s, nostalgic charm"},
+  {label:"ชุดแดง-ดำ",sub:"Power Contrast",val:"striking red and black outfit combination, bold contrast, dramatic presence"},
+  {label:"ชุดนักธุรกิจหญิง",sub:"Business Woman",val:"sharp women's business power suit, confident female executive, glass-ceiling breaker"},
+  {label:"ชุดโทนธรรมชาติ",sub:"Earthy Tones",val:"earthy tone outfit in brown, beige and terracotta, grounded warm personality"},
+];
+
+const COLORS = [
+  {label:"⬜ ขาวมันโลหะ",sub:"Classic Clean",val:"Bold, glossy white extruded 3D letters with metallic sheen and deep crisp shadows. Letters intact and undamaged."},
+  {label:"🟥 แดงเลือดหมู",sub:"Deep Red Power",val:"Bold, deep crimson red extruded 3D letters with dark red shadows, powerful and bold."},
+  {label:"🟥 แดงสด",sub:"Vivid Red",val:"Bold, vivid scarlet red glossy extruded 3D letters with bright highlights and dramatic shadows."},
+  {label:"🟥 แดง-ทอง",sub:"Red + Gold Edge",val:"Bold, glossy red extruded 3D letters with shimmering gold metallic edges and dramatic shadows."},
+  {label:"🟨 ทองหรู",sub:"Luxury Gold",val:"Bold, brilliant gold extruded 3D letters with warm amber reflections and rich metallic sheen, luxury feel."},
+  {label:"🟨 ทองซีด",sub:"Pale Champagne",val:"Bold, champagne pale gold extruded 3D letters with soft warm glow and subtle shimmer."},
+  {label:"🟨 เหลืองสด",sub:"Bright Yellow",val:"Bold, vivid yellow extruded 3D letters with sunny highlights and soft yellow shadows, energetic and cheerful."},
+  {label:"🟦 กรมท่า-เงิน",sub:"Navy + Silver",val:"Bold, matte navy blue extruded 3D letters with silver metallic trim, clean and authoritative."},
+  {label:"🟦 ฟ้าสด",sub:"Sky Blue",val:"Bold, bright sky blue glossy extruded 3D letters with white highlights and clean blue shadows."},
+  {label:"💙 Neon ฟ้า",sub:"Cyberpunk Blue",val:"Bold, neon-lit extruded 3D letters glowing electric blue with luminous halo and sharp futuristic edges."},
+  {label:"💙 Neon Cyan",sub:"Electric Cyan",val:"Bold, neon cyan extruded 3D letters with intense glow emission, electric and futuristic."},
+  {label:"🟩 เขียวมรกต",sub:"Emerald",val:"Bold, rich emerald green glossy extruded 3D letters with deep green shadows and jewel-like finish."},
+  {label:"🟩 Neon Green",sub:"Radioactive",val:"Bold, neon lime green glowing extruded 3D letters with radioactive green emission, high energy."},
+  {label:"🟩 เขียวมิ้นต์",sub:"Fresh Mint",val:"Bold, soft mint green extruded 3D letters with clean pastel finish and gentle shadows, fresh feel."},
+  {label:"🟪 ม่วงราชวงศ์",sub:"Royal Purple",val:"Bold, deep royal purple glossy extruded 3D letters with golden edge highlights, regal and luxurious."},
+  {label:"🟪 Neon Purple",sub:"Electric Violet",val:"Bold, neon violet glowing extruded 3D letters with electric purple halo and vibrant glow effect."},
+  {label:"🌸 ชมพูหวาน",sub:"Pastel Pink",val:"Bold, soft pastel pink extruded 3D letters with gentle highlights and cute sweet shadows."},
+  {label:"🌸 ชมพูร้อน",sub:"Hot Pink",val:"Bold, vivid hot pink extruded 3D letters with intense magenta shadows and bold pop-art energy."},
+  {label:"🌈 ไล่สีรุ้ง",sub:"Rainbow Gradient",val:"Bold extruded 3D letters with smooth rainbow gradient across all colors, vibrant and celebratory."},
+  {label:"🌈 ม่วง-ชมพู",sub:"Purple to Pink",val:"Bold extruded 3D letters with gradient blending from deep purple to hot pink, modern and bold."},
+  {label:"🌈 ฟ้า-เขียว",sub:"Ocean Gradient",val:"Bold extruded 3D letters with ocean gradient from deep blue to fresh teal, cool and fresh."},
+  {label:"🌈 แดง-ส้ม",sub:"Fire Gradient",val:"Bold extruded 3D letters with fire gradient from deep red to vivid orange, intense and passionate."},
+  {label:"⚪ เงินโครเมียม",sub:"Chrome Silver",val:"Bold, polished chrome silver extruded 3D letters with perfect mirror-like reflections and metallic finish."},
+  {label:"⬛ ดำมันวาว",sub:"Glossy Black",val:"Bold, jet black glossy extruded 3D letters with sharp bright highlights and deep dramatic shadows."},
+  {label:"⬛ ดำด้าน",sub:"Matte Black",val:"Bold, matte flat black extruded 3D letters with subtle texture and minimal sheen, understated power."},
+  {label:"🟧 ส้มสด",sub:"Vivid Orange",val:"Bold, vivid orange glossy extruded 3D letters with warm amber shadows and energetic warmth."},
+  {label:"🟧 ส้ม-ทอง",sub:"Orange Gold",val:"Bold, orange-to-gold gradient extruded 3D letters blending warm sunset tones, rich and inviting."},
+  {label:"🤎 น้ำตาลหนัง",sub:"Leather Brown",val:"Bold, warm leather brown extruded 3D letters with natural texture suggestion and earthy depth."},
+  {label:"🤍 ขาวนวล",sub:"Cream White",val:"Bold, warm cream white extruded 3D letters with soft ivory glow and gentle shadows, elegant."},
+  {label:"🎨 กำหนดเอง",sub:"ใช้รหัสสี HEX",val:"CUSTOM_HEX"},
+];
+
+const POSES = [
+  // หมวด 1: ท่ากอด/พิง/นั่งกับตัวอักษร
+  {label:"นั่งกอดตัวอักษร",sub:"ท่านั่งน่ารัก",val:"Sitting gracefully beside and embracing the giant 3D typography, leaning body against a letter, draping arm around another affectionately. The letters are large-scale set pieces."},
+  {label:"ยืนพิงตัวอักษร",sub:"กันเอง มีสไตล์",val:"Standing confidently beside the giant 3D letters, one hand casually resting on a letter, looking directly at the viewer with a warm smile."},
+  {label:"นั่งบนตัวอักษร",sub:"ท่าบนสุด",val:"Sitting atop the 3D typography letters, legs crossed elegantly, looking into camera with a warm inviting smile."},
+  {label:"ยืนแบก 2 ข้าง",sub:"ค้ำตัวอักษร",val:"Standing between two giant 3D letters, arms spread wide pressing against both letters as if holding them apart, powerful dramatic pose."},
+  // หมวด 2: อยู่ระหว่างตัวอักษร
+  {label:"ยืนระหว่าง 2 ตัว",sub:"อยู่กลางช่องว่าง",val:"Standing in the gap between two giant 3D letters, arms resting on each letter at shoulder height, relaxed and confident, letters large enough to frame the subject on both sides."},
+  {label:"นั่งระหว่าง 2 ตัว",sub:"พักผ่อนตรงกลาง",val:"Sitting casually on the ground between two giant 3D letters, back resting against one letter, legs extended comfortably, relaxed lifestyle feel."},
+  {label:"โผล่จากช่อง O/A",sub:"ซ่อนในตัวอักษร",val:"Subject popping up cheerfully from inside the hollow opening of a giant 3D letter O or A, hands gripping the edges, head and upper body visible, playful and surprising."},
+  {label:"ครึ่งตัวโผล่จากช่อง",sub:"มือวางบนขอบ",val:"Subject emerging halfway from inside a giant hollow 3D letter, both hands placed on the letter's rim, leaning forward with a big smile, as if peeking out of a window."},
+  {label:"นั่งในช่องตัวอักษร",sub:"เหมือนนั่งบ้าน",val:"Subject sitting comfortably inside the hollow space of a giant 3D letter, legs dangling over the edge, arms resting on the sides, cozy and fun composition."},
+  {label:"ดันตัวอักษรออก",sub:"ดราม่า มีพลัง",val:"Subject standing in the center pushing two giant 3D letters apart with both arms extended, dramatic strain expression, concept of breaking through barriers."},
+  {label:"ตัวอักษรล้อมรอบ",sub:"อยู่ตรงกลางวง",val:"Subject standing in the center with giant 3D letters arranged in a semicircle around them, arms spread wide, triumphant and surrounded by success."},
+  {label:"พุ่งทะลุตัวอักษร",sub:"Cinematic Action",val:"Subject dramatically bursting through a giant 3D letter as if breaking through a wall, motion blur on letters, cinematic action movie energy, epic composition."},
+  {label:"ตัวอักษรเป็นประตู",sub:"Walking Through",val:"Subject standing in the opening formed by giant 3D letters as if they are a grand arch or doorway, looking directly at camera, grand entrance composition."},
+  // หมวด 3: ห้อย/ปีน/ไต่
+  {label:"ห้อยจากตัวอักษร",sub:"เท้าห้อยอยู่",val:"Subject hanging from the top edge of a giant 3D letter, hands gripping the letter's upper rim, feet dangling freely, playful adventurous energy."},
+  {label:"นั่งบนแขนงตัว T/L",sub:"นั่งบนคาน",val:"Subject sitting on the horizontal arm of a giant 3D letter T or L like sitting on a high beam, legs hanging down, confident and carefree."},
+  {label:"ปีนข้างตัวอักษร",sub:"กำลังปีน",val:"Subject in mid-climb position on the side of a giant 3D letter, one hand gripping a notch, one foot braced against the surface, adventurous and determined."},
+  {label:"เกาะบนสุด มองลง",sub:"ท่าบนยอด",val:"Subject perched on top of the tallest giant 3D letter, looking down at the camera from above with a victorious smile, elevated achievement pose."},
+  // หมวด 4: ท่ามีพลัง/โปรไฟล์
+  {label:"ยืนตรงหน้า",sub:"ภาพโปรไฟล์",val:"Standing upright directly in front of the camera, confident posture, slight smile, professional headshot-style pose."},
+  {label:"ชี้ตัวอักษร",sub:"ดราม่า มั่นใจ",val:"Pointing triumphantly at the giant 3D typography, dynamic energetic pose, full of excitement and confidence."},
+  {label:"กระโดดดีใจ",sub:"Jumping Joy",val:"Jumping joyfully in the air beside the letters, arms spread wide, huge smile, pure excitement and celebration."},
+  {label:"ท่าวิ่ง Dynamic",sub:"Moving Forward",val:"Dynamic running or stride pose toward the camera, letters visible behind, concept of moving toward success."},
+  {label:"ยกแขน V-shape",sub:"ชัยชนะ",val:"Both arms raised in a V-for-victory pose, triumphant expression, celebrating success energetically."},
+  {label:"มือบนเอว",sub:"Power Stance",val:"Standing with both hands on hips, feet apart, dominant power pose, strong and commanding."},
+  {label:"กำมือ Fist Pump",sub:"Motivation!",val:"One fist pumped high into the air, screaming with joy and motivation, extreme celebration energy."},
+  // หมวด 5: ท่าผ่อนคลาย/เล่าเรื่อง
+  {label:"เอนหลัง Relax",sub:"ผ่อนคลาย",val:"Leaning back relaxedly against the 3D letters, arms crossed loosely, casual and approachable expression."},
+  {label:"นั่งขัดสมาธิ",sub:"Mindful / Calm",val:"Sitting cross-legged in a meditative pose beside the letters, peaceful and mindful energy."},
+  {label:"ท่า Thinking",sub:"นักคิด / Reflect",val:"One hand on chin in a classic thinking pose near the letters, thoughtful and intellectual expression, concept of deep ideas."},
+  {label:"นั่งบันได/Steps",sub:"Casual Story",val:"Sitting on the base of the letters or a ledge casually, leaning on knees, conversational story-telling pose."},
+  {label:"นอนเล่น Creative",sub:"Fun & Playful",val:"Lying down casually beside the letters, propped up on elbows, playful and creative vibe."},
+  {label:"มองข้างหลัง",sub:"Mysterious Back",val:"Walking away or looking back over shoulder at the letters, intriguing mysterious pose, story-telling composition."},
+  {label:"อ้าแขนต้อนรับ",sub:"Open & Welcome",val:"Arms spread wide open in a welcoming gesture toward camera, big warm smile, inviting and open personality."},
+  {label:"ท่าเดิน Catwalk",sub:"Fashion Confident",val:"Mid-stride catwalk walking pose beside the letters, confident fashion model energy, elegant and powerful movement."},
+];
+
+const BACKGROUNDS = [
+  {label:"แดง-ดำ ดราม่า",sub:"High Energy",val:"Deep cinematic red and black background with dramatic light streaks and rays bursting outward."},
+  {label:"ขาว Studio",sub:"Clean Minimal",val:"Clean pure white studio background with soft diffused professional lighting."},
+  {label:"กรมท่า-ทอง",sub:"Luxury Premium",val:"Dark navy gradient background with warm golden bokeh lights, luxury atmosphere."},
+  {label:"ส้ม-เหลือง",sub:"Energetic Warm",val:"Bright vibrant gradient from orange to yellow, high energy motivational background."},
+  {label:"Tech Dark Blue",sub:"Technology",val:"Dark tech background with blue grid patterns and glowing circuit lines, futuristic."},
+  {label:"Pastel Soft",sub:"Gentle Friendly",val:"Soft pastel gradient in light pink and lavender, warm gentle atmosphere."},
+  {label:"ดำ Cinematic",sub:"Dramatic",val:"Pure black background with a single dramatic spotlight, high contrast cinematic mood."},
+  {label:"ป่าไม้ Forest",sub:"Nature Fresh",val:"Lush green forest background with soft sunlight filtering through trees, natural and fresh."},
+  {label:"ท้องฟ้า",sub:"Open & Free",val:"Bright clear blue sky with soft white clouds, open and optimistic background."},
+  {label:"พระอาทิตย์ตก",sub:"Golden Hour",val:"Golden hour sunset with warm orange and pink hues, emotional and inspiring."},
+  {label:"เมืองกลางคืน",sub:"City Night",val:"Blurred city nightscape with glittering bokeh lights, urban metropolitan energy."},
+  {label:"ออฟฟิศ Modern",sub:"Work Space",val:"Modern clean office with glass windows and minimalist furniture, professional setting."},
+  {label:"ม่วง-ชมพู",sub:"Creative Gradient",val:"Deep purple to hot pink gradient, vibrant and creative, bold modern aesthetic."},
+  {label:"ทะเล Beach",sub:"Freedom Summer",val:"Tropical beach with turquoise water and white sand, freedom and vacation energy."},
+  {label:"อวกาศ Space",sub:"Cosmic Epic",val:"Deep space with stars, galaxies and nebula clouds, epic cosmic scale and wonder."},
+  {label:"Bokeh Abstract",sub:"Dreamy Soft",val:"Soft blurred bokeh abstract with multiple overlapping colored light circles, dreamy."},
+  {label:"หินอ่อน Marble",sub:"Luxury Minimal",val:"White and grey marble texture background, elegant and luxurious."},
+  {label:"ทะเลทราย",sub:"Strong Desert",val:"Desert landscape with golden sand dunes and dramatic sky, strength concept."},
+  {label:"กำแพงอิฐ Brick",sub:"Urban Grunge",val:"Urban brick wall with subtle texture, grunge and street art aesthetic."},
+  {label:"Neon Cyberpunk",sub:"Electric Night",val:"Cyberpunk neon-lit alley with electric pink and cyan neon signs, rain reflections."},
+  {label:"ภูเขา Mountain",sub:"Ambitious High",val:"Majestic mountain range, crisp air, concept of reaching great heights."},
+  {label:"ห้องสมุด Library",sub:"Knowledge",val:"Classic grand library with towering bookshelves and warm lighting, wisdom and knowledge."},
+  {label:"เวที Stage",sub:"Spotlight Star",val:"Concert stage with dramatic spotlights and smoke effects, star performer atmosphere."},
+  {label:"Minimal Lines",sub:"Design Clean",val:"Clean white background with subtle thin geometric lines, modern design aesthetic."},
+  {label:"ทุ่งดอกไม้",sub:"Spring Joy",val:"Colorful flower field under blue sky, joyful and vibrant nature background."},
+  {label:"Golden Backlight",sub:"Magic Halo",val:"Warm golden hour backlight creating a beautiful rim light halo around subject, magical."},
+  {label:"Flat Solid Color",sub:"Social Simple",val:"Flat solid color background in a single bold hue, clean and simple for social media."},
+  {label:"ฝน Rain Effect",sub:"Moody Drama",val:"Moody rainy background with rain streaks or wet street reflections, emotional drama."},
+  {label:"Cozy Room",sub:"Warm Interior",val:"Cozy warm interior with soft lighting, plants and wooden furniture, homey feel."},
+  {label:"จากรูปที่อัปโหลด",sub:"⬆ วางรูปได้เลย",val:"UPLOADED_BACKGROUND"},
+];
+
+const STYLES = [
+  {label:"📸 ภาพโฆษณาหรู",sub:"Luxury Ad — อย่างนักโฆษณามืออาชีพ",val:"Premium luxury advertising photography style, fashion editorial lighting, sharp focus, high contrast, ultra realistic, studio quality."},
+  {label:"🎬 โปสเตอร์หนัง",sub:"Movie Poster — ดราม่า ยิ่งใหญ่",val:"Epic cinematic movie poster style, dramatic wide-angle lens, intense lighting, bold composition, high production value."},
+  {label:"📱 Social Media",sub:"Instagram Ready — สีสด จับตา",val:"Eye-catching social media content style, vibrant colors, bold focus, high energy, Instagram and Facebook ready."},
+  {label:"🏢 Corporate Clean",sub:"บริษัท — สะอาด มืออาชีพ",val:"Clean corporate professional photography, neutral tones, business-appropriate lighting, trust and reliability conveyed."},
+  {label:"🎨 Digital Art",sub:"ภาพวาด — สวยงามศิลปะ",val:"High quality digital illustration with painterly textures, artistic brush strokes, vibrant composition."},
+  {label:"💡 Motivational",sub:"แรงบันดาลใจ — ให้กำลังใจ",val:"Motivational and inspirational poster style, uplifting warm colors, positive energy, empowering mood."},
+  {label:"🌆 Magazine Editorial",sub:"นิตยสาร — ดูดี มีสไตล์",val:"High-end magazine editorial photography, sophisticated styling, professional model lighting, fashion magazine quality."},
+  {label:"🖤 Dark Moody",sub:"มืด ลึก ดราม่า",val:"Dark and moody artistic style, deep shadows, mysterious atmosphere, high contrast, dramatic feel."},
+  {label:"☀️ Bright & Clean",sub:"สว่าง สดใส ร่าเริง",val:"Bright clean photography style, high key lighting, white tones, cheerful positive atmosphere."},
+  {label:"🌈 Colorful Pop",sub:"Pop Art — สีสันเต็มที่",val:"Colorful pop art inspired style, bold saturated colors, playful and energetic composition."},
+  {label:"🖼 Fine Art Portrait",sub:"ภาพเหมือน งานศิลปะ",val:"Fine art portrait photography, dramatic Rembrandt lighting, painterly quality, museum-worthy composition."},
+  {label:"⚡ Sports Dynamic",sub:"กีฬา — เร้าใจ เคลื่อนไหว",val:"Dynamic sports photography style, motion blur, action-frozen, adrenaline-filled energy, athletic intensity."},
+  {label:"🌸 Soft Dreamy",sub:"นุ่ม ฝัน อ่อนหวาน",val:"Soft dreamy photography, pastel hues, lens flare and bokeh, romantic and gentle atmosphere."},
+  {label:"🤖 Futuristic Tech",sub:"อนาคต — เทคโนโลยี AI",val:"Futuristic sci-fi aesthetic, blue and teal color grading, holographic overlays, advanced digital world."},
+  {label:"🏛 Classic Timeless",sub:"คลาสสิก ยั่งยืน",val:"Classic timeless photography, natural balanced lighting, muted refined tones, elegant and enduring."},
+  {label:"🌿 Natural Organic",sub:"ธรรมชาติ — อบอุ่น จริงใจ",val:"Natural organic photography, warm earth tones, gentle natural lighting, authentic and genuine feel."},
+  {label:"💎 Ultra Realistic",sub:"สมจริงสุดๆ — เหมือนถ่ายจริง",val:"Ultra photorealistic, 8K quality, perfect skin detail, professional DSLR photography look, indistinguishable from real photo."},
+  {label:"🎭 Theatrical Drama",sub:"ละคร — โอ้อวด อลังการ",val:"Theatrical and dramatic style, over-the-top lighting, stage-quality drama, bold expressive composition."},
+  {label:"🌙 Twilight Night",sub:"กลางคืน — ลึกลับ โรแมนติก",val:"Night-time twilight photography, deep blue and purple tones, atmospheric night lighting, mysterious romantic mood."},
+  {label:"✨ Fantasy Magic",sub:"แฟนตาซี — มนตร์เสน่ห์",val:"Fantasy magical photography, glowing particles, ethereal light effects, enchanted fairy-tale atmosphere."},
+];
+
+const RATIOS = [
+  {label:"1:1",sub:"สี่เหลี่ยม / Feed",val:"1:1 square ratio."},
+  {label:"4:5",sub:"Instagram Portrait",val:"4:5 ratio (Instagram portrait)."},
+  {label:"9:16",sub:"Story / Reels / TikTok",val:"9:16 vertical ratio (Stories and Reels)."},
+  {label:"16:9",sub:"YouTube / Banner",val:"16:9 landscape widescreen ratio."},
+  {label:"2:3",sub:"Portrait โปสเตอร์",val:"2:3 portrait ratio."},
+  {label:"3:4",sub:"A4 / โบรชัวร์",val:"3:4 ratio (A4 print)."},
+  {label:"3:1",sub:"Cover / Banner กว้าง",val:"3:1 ultra wide banner ratio."},
+];
+
+// ===== STATE =====
+let state = {outfit:null,pose:null,bg:null,style:null,ratio:"1:1 square ratio.",color:null,bgUploadDesc:""};
+
+// ===== RENDER CHIPS =====
+function renderChips(containerId, data, key, badgeId, groups) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = "";
+  let lastGroup = null;
+  data.forEach((item, i) => {
+    if (groups && item.group && item.group !== lastGroup) {
+      const gl = document.createElement("div");
+      gl.className = "chip-group-label";
+      gl.textContent = "— " + item.group + " —";
+      c.appendChild(gl);
+      lastGroup = item.group;
+    }
+    const d = document.createElement("div");
+    d.className = "chip";
+    d.innerHTML = item.label + '<span class="sub">' + item.sub + '</span>';
+    d.addEventListener("click", function() {
+      c.querySelectorAll(".chip").forEach(x => x.classList.remove("active"));
+      d.classList.add("active");
+      if (item.val === "UPLOADED_BACKGROUND") {
+        state[key] = state.bgUploadDesc || "";
+      } else if (item.val === "CUSTOM_HEX") {
+        document.getElementById("hexColor").focus();
+      } else {
+        state[key] = item.val;
+      }
+      if (badgeId) document.getElementById(badgeId).textContent = item.label.replace(/[🎨📸👗🧍🖼⬜🟥🟨🟦💙🟩🟪🌸🌈⚪⬛🟧🤎🤍]/gu,"").trim();
+      update();
+    });
+    c.appendChild(d);
+  });
+}
+
+// ===== POSE GROUPS =====
+const POSES_WITH_GROUPS = [
+  {group:"กอด / พิง / ค้ำ",...POSES[0]},
+  {group:"กอด / พิง / ค้ำ",...POSES[1]},
+  {group:"กอด / พิง / ค้ำ",...POSES[2]},
+  {group:"กอด / พิง / ค้ำ",...POSES[3]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[4]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[5]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[6]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[7]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[8]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[9]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[10]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[11]},
+  {group:"อยู่ระหว่างตัวอักษร",...POSES[12]},
+  {group:"ห้อย / ปีน / ไต่",...POSES[13]},
+  {group:"ห้อย / ปีน / ไต่",...POSES[14]},
+  {group:"ห้อย / ปีน / ไต่",...POSES[15]},
+  {group:"ห้อย / ปีน / ไต่",...POSES[16]},
+  {group:"ท่ามีพลัง",...POSES[17]},
+  {group:"ท่ามีพลัง",...POSES[18]},
+  {group:"ท่ามีพลัง",...POSES[19]},
+  {group:"ท่ามีพลัง",...POSES[20]},
+  {group:"ท่ามีพลัง",...POSES[21]},
+  {group:"ท่ามีพลัง",...POSES[22]},
+  {group:"ท่ามีพลัง",...POSES[23]},
+  {group:"ผ่อนคลาย / เล่าเรื่อง",...POSES[24]},
+  {group:"ผ่อนคลาย / เล่าเรื่อง",...POSES[25]},
+  {group:"ผ่อนคลาย / เล่าเรื่อง",...POSES[26]},
+  {group:"ผ่อนคลาย / เล่าเรื่อง",...POSES[27]},
+  {group:"ผ่อนคลาย / เล่าเรื่อง",...POSES[28]},
+  {group:"ผ่อนคลาย / เล่าเรื่อง",...POSES[29]},
+  {group:"ผ่อนคลาย / เล่าเรื่อง",...POSES[30]},
+];
+
+// ===== HEX =====
+function applyHex(hex) {
+  hex = hex.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    document.getElementById("colorPicker").value = hex;
+    state.color = "Bold extruded 3D letters in exact color "+hex+", glossy surface with matching deep shadows and bright highlights. Letters remain intact.";
+    document.getElementById("colorBadge").textContent = "สี " + hex;
+    document.querySelectorAll("#colorChips .chip").forEach(c => {
+      c.classList.remove("active");
+      if (c.textContent.includes("กำหนดเอง")) c.classList.add("active");
+    });
+    update();
+  }
+}
+function syncHex(val) {
+  document.getElementById("hexColor").value = val;
+  applyHex(val);
+}
+
+// ===== BG UPLOAD =====
+function handleBgUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById("bgPreview");
+    img.src = e.target.result;
+    img.style.display = "block";
+    state.bgUploadDesc = "using the uploaded reference background image as the scene backdrop, match its environment, lighting and color palette faithfully.";
+    state.bg = state.bgUploadDesc;
+    document.querySelectorAll("#bgChips .chip").forEach(c => {
+      c.classList.remove("active");
+      if (c.textContent.includes("จากรูปที่อัปโหลด")) c.classList.add("active");
+    });
+    document.getElementById("bgBadge").textContent = "รูปที่อัปโหลด";
+    document.getElementById("bgUploadNote").style.display = "block";
+    document.getElementById("bgUploadNote").textContent = "✅ อัปโหลดรูปพื้นหลังแล้ว";
+    update();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ===== UPDATE =====
+function update() {
+  const subject = document.getElementById("subjectType").value;
+  const subCustom = document.getElementById("subjectCustom").value.trim();
+  const outfitCustom = document.getElementById("outfitCustom").value.trim();
+  const text = document.getElementById("textContent").value.trim();
+  const poseCustom = document.getElementById("poseCustom").value.trim();
+
+  const outfit = state.outfit || "";
+  const color = state.color || "";
+  const pose = poseCustom || state.pose || "";
+  const bg = state.bg || "";
+  const style = state.style || "";
+  const ratio = state.ratio || "";
+
+  const subOpts = document.getElementById("subjectType");
+  const subLabel = subOpts.options[subOpts.selectedIndex].text.replace(/[📸👩‍💼👨‍💼👥🌸💎💪🚫]/gu,"").trim();
+  document.getElementById("subBadge").textContent = subject ? subLabel : "ยังไม่ได้เลือก";
+
+  let parts = [];
+  if (subject) parts.push(subject);
+  if (subCustom) parts.push(subCustom + ".");
+  const finalOutfit = outfit + (outfitCustom ? (outfit ? ", "+outfitCustom : outfitCustom) : "");
+  if (finalOutfit) parts.push("Wearing: " + finalOutfit + ".");
+  if (text) {
+    parts.push('Giant 3D typography spelling "' + text + '", letters are large-scale set pieces big enough for a person to sit inside, lean against, or stand between.');
+    if (color) parts.push(color);
+  }
+  if (pose) parts.push(pose);
+  if (bg && bg !== "UPLOADED_BACKGROUND") parts.push("Background: " + bg);
+  else if (state.bgUploadDesc) parts.push("Background: " + state.bgUploadDesc);
+  if (style) parts.push("Style: " + style);
+  if (ratio) parts.push(ratio);
+
+  const prompt = parts.join(" ");
+  const outEl = document.getElementById("outputText");
+  const phEl = document.getElementById("outputPlaceholder");
+
+  if (prompt.trim()) {
+    outEl.textContent = prompt;
+    outEl.style.display = "block";
+    phEl.style.display = "none";
+    const wc = prompt.split(/\s+/).length;
+    document.getElementById("tokenCount").textContent = "~"+wc+" words · ~"+Math.ceil(wc*1.3)+" tokens";
+  } else {
+    outEl.style.display = "none";
+    phEl.style.display = "block";
+    document.getElementById("tokenCount").textContent = "";
+  }
+
+  buildSummary(subject, finalOutfit, text, pose, bg, style);
+}
+
+// ===== SUMMARY =====
+function buildSummary(subject, outfit, text, pose, bg, style) {
+  const el = document.getElementById("summaryText");
+  if (!subject && !outfit && !text && !bg) {
+    el.style.cssText = "color:#c8a840;font-style:italic;font-size:13px";
+    el.textContent = "เลือกตัวเลือกด้านบน แล้วสรุปจะปรากฏที่นี่...";
+    return;
+  }
+  el.style.cssText = "font-size:13.5px;color:#5a3e00;line-height:1.8";
+  let lines = [];
+  if (subject) {
+    const m = {"uploaded woman":"📸 หญิง (Reference)","uploaded man":"📸 ชาย (Reference)","professional Thai woman":"👩 หญิงไทย สายวิชาชีพ","professional Thai man":"👨 ชายไทย สายวิชาชีพ","diverse group":"👥 กลุ่มทีมงาน","young cheerful":"🌸 หญิงสาวสดใส","mature elegant":"💎 หญิงวัยกลางคน","strong athletic":"💪 ชายสายกีฬา"};
+    const found = Object.keys(m).find(k=>subject.includes(k));
+    lines.push("👤 ตัวแบบ: "+(found?m[found]:"กำหนดเอง"));
+  }
+  if (outfit) {
+    const l = document.querySelector("#outfitChips .chip.active");
+    lines.push("👗 ชุด: "+(l?l.childNodes[0].textContent.trim():"กำหนดเอง"));
+  }
+  if (text) lines.push('✍️ ข้อความ 3D: "'+text+'"');
+  if (state.color) {
+    const cl = document.querySelector("#colorChips .chip.active");
+    lines.push("🎨 สีอักษร: "+(cl?cl.childNodes[0].textContent.trim():"กำหนดเอง"));
+  }
+  if (pose) {
+    const pl = document.querySelector("#poseChips .chip.active");
+    lines.push("🧍 ท่าทาง: "+(pl?pl.childNodes[0].textContent.trim():"กำหนดเอง"));
+  }
+  if (bg) {
+    const bl = document.querySelector("#bgChips .chip.active");
+    lines.push("🖼 พื้นหลัง: "+(bl?bl.childNodes[0].textContent.trim():"กำหนดเอง"));
+  }
+  if (state.style) {
+    const sl = document.querySelector("#styleChips .chip.active");
+    lines.push("🎨 สไตล์: "+(sl?sl.childNodes[0].textContent.trim():"กำหนดเอง"));
+  }
+  const rl = document.querySelector("#ratioChips .chip.active");
+  if (rl) lines.push("📐 สัดส่วน: "+rl.childNodes[0].textContent.trim());
+  el.innerHTML = lines.join("<br>");
+}
+
+// ===== COPY =====
+function copyPrompt() {
+  const el = document.getElementById("outputText");
+  const text = el.textContent || el.innerText || "";
+  if (!text.trim()) {
+    alert("ยังไม่มี Prompt — กรุณาเลือกตัวเลือกก่อนนะคะ");
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showCopied).catch(function() {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand("copy"); showCopied(); } catch(e) { alert("คัดลอกไม่ได้ กรุณาเลือกข้อความแล้ว Ctrl+C นะคะ"); }
+  document.body.removeChild(ta);
+}
+function showCopied() {
+  const b = document.getElementById("copiedBadge");
+  b.style.display = "inline-block";
+  setTimeout(()=>{ b.style.display = "none"; }, 2500);
+}
+
+// ===== RESET =====
+function resetAll() {
+  document.getElementById("subjectType").selectedIndex = 0;
+  ["subjectCustom","outfitCustom","textContent","poseCustom","hexColor"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("bgPreview").style.display = "none";
+  document.getElementById("bgUploadNote").style.display = "none";
+  state = {outfit:null,pose:null,bg:null,style:null,ratio:"1:1 square ratio.",color:null,bgUploadDesc:""};
+  document.querySelectorAll(".chip.active").forEach(c => c.classList.remove("active"));
+  document.querySelectorAll(".selected-badge").forEach(b => b.textContent = "ยังไม่ได้เลือก");
+  document.getElementById("ratioChips").querySelectorAll(".chip")[0].classList.add("active");
+  update();
+}
+
+// ===== INIT =====
+renderChips("outfitChips", OUTFITS, "outfit", "outBadge", false);
+renderChips("colorChips", COLORS, "color", "colorBadge", false);
+renderChips("poseChips", POSES_WITH_GROUPS, "pose", "poseBadge", true);
+renderChips("bgChips", BACKGROUNDS, "bg", "bgBadge", false);
+renderChips("styleChips", STYLES, "style", "styBadge", false);
+renderChips("ratioChips", RATIOS, "ratio", null, false);
+document.getElementById("ratioChips").querySelectorAll(".chip")[0].classList.add("active");
+update();
+</script>
+</body>
+</html>
 
